@@ -1,0 +1,452 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        128,
+        688
+      ],
+      "id": "ca1ac281-2e50-4263-8079-8e6805f3bcb9",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        848
+      ],
+      "id": "50ce3bfb-fdef-43c6-9a37-6209dce70b78",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.rss_link }}",
+        "options": {
+          "ignoreSSL": false
+        }
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        1104,
+        752
+      ],
+      "id": "cb355c26-1f9d-49a6-bd75-1c15ea9e8346",
+      "name": "RSS Read",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const title = ($json.title || '').toString();\nconst desc =\n  ($json.content || $json.contentSnippet || $json.description || '').toString();\n\nconst text = (title + '\\n' + desc).toLowerCase();\n\nconst internKeywords = [\n  'intern',\n  'internship',\n  'تدريب',\n  'تدريب صيفى',\n  'تدريب صيفي',\n];\n\nconst fieldKeywords = [\n  'ai',\n  'a.i.',\n  'ai engineering',\n  'ai automation',\n  'machine learning',\n  'data science',\n  'ذكاء اصطناعى',\n  'ذكاء اصطناعي',\n  'الذكاء الاصطناعى',\n  'الذكاء الاصطناعي',\n];\n\nconst includesAny = (arr) => arr.some((k) => text.includes(k.toLowerCase()));\n\nconst hasIntern = includesAny(internKeywords);\nconst hasField = includesAny(fieldKeywords);\n\n// IMPORTANT: n8n requires: return [{ json: {...} }]\nreturn [\n  {\n    json: {\n      ...$json,\n      _match: {\n        hasIntern,\n        hasField,\n        shouldSend: hasIntern && hasField,\n        matchedIntern: internKeywords.filter((k) =>\n          text.includes(k.toLowerCase())\n        ),\n        matchedField: fieldKeywords.filter((k) =>\n          text.includes(k.toLowerCase())\n        ),\n      },\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        544
+      ],
+      "id": "615b6dc3-1575-49fa-9378-1a93d9faee4f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        864,
+        608
+      ],
+      "id": "7e0330c8-0592-428f-9b9e-72b359b71ed7",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0db00e69-2613-404e-a035-1b4ffe6510ff",
+              "name": "rss_link",
+              "value": "={{ $json['rss_link'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        864
+      ],
+      "id": "1ffaa032-547e-44db-8f37-3cfb794ee092",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        288
+      ],
+      "id": "07b14e4f-4651-42f9-a869-f5272c149a42",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6ef01e1f-55ab-477d-8bca-d20295b9df72",
+              "leftValue": "={{ $json._match.hasIntern }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "d3d9e539-2a8d-4b9a-bfd0-0c2099bb451b",
+              "leftValue": "={{ $json._match.hasField }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2112,
+        560
+      ],
+      "id": "a523c124-c5e4-46af-b1a8-143e02ddb5a4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "={{ 'New internship match — ' + ($json.company_name || $json.Name || '') }}",
+        "message": "=Company: {{ $json.company_name || $json.Name || '' }}\nMatched intern: {{ $json._match.matchedIntern.join(', ') }}\nMatched field: {{ $json._match.matchedField.join(', ') }}\n\nTitle: {{ $json.title }}\nLink: {{ $json.link }}\nDate: {{ $json.pubDate }}\n\nContent:\n{{ $json.content }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2160,
+        928
+      ],
+      "id": "f614dff4-2112-4c88-ae21-4624354aadde",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "hi new by",
+        "message": "={{ $json.title }},\n{{ $json.content }},\n{{ $json.guid }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2128,
+        1120
+      ],
+      "id": "9c5f879a-8f1e-47f5-8877-9d1f08a37af8",
+      "name": "Send a message1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "tableId": "questions"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        48
+      ],
+      "id": "a9567b1d-9e29-4a91-bcd5-129bf73fcd8a",
+      "name": "Create a row",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "toRecipients": "you@example.com",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        256
+      ],
+      "id": "15534f66-fc6f-4d9a-9bd9-b0c0acd984ee",
+      "name": "Send a message2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-503",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "503",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "366944ca-391e-423f-bfa4-0c9e97b2b7aa",
+      "name": "Check if 503 Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1424,
+        768
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1e6b1175-d48a-4c12-b4af-5d88c6fb2eda",
+      "name": "Wait 5 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        768
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check if 503 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if 503 Error": {
+      "main": [
+        [
+          {
+            "node": "Wait 5 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5 Seconds": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  }
+}
